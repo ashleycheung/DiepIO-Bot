@@ -2,7 +2,9 @@
 
 This a bot that plays Diep.io using python and OpenCV
 
-A video demonstrating the bot in action can be found here:
+![Bot Gameplay](/gameplay.gif)
+
+The full video demonstrating the bot in action can be found here:
 
 https://youtu.be/hiXIBNsqHos
 
