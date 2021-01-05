@@ -1,12 +1,23 @@
 # DiepIO Bot
 
-This a bot that plays Diep.io using python and OpenCV
+This a bot that plays Diep.io using Python and OpenCV
 
-![Bot Gameplay](/gameplay.gif)
+## Bot functions
+### Collision Avoidance
+The bot is able to automatically avoid collisions based on how close nearby objects are
+and which direction the bot is heading
 
-The full video demonstrating the bot in action can be found here:
+![Bot Collision Avoidance](demo/bot_avoidance_collision.gif)
 
-https://youtu.be/hiXIBNsqHos
+#### Object Classification
+The bot is able to classify its neighbouring shapes.
+
+![Bot Classification](demo/bot_classification.gif)
+
+#### Automatic Targetting
+The bot is able to choose its best target based on certain heuristics
+
+![Bot Targetting](demo/bot_targetting.gif)
 
 ## Instructions
 
