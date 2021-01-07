@@ -95,7 +95,7 @@ class Bot:
             self.game_parser.update(frame, self.environment)
 
             #Apply the bot action
-            #self.behaviour.action(self.environment, self.control, frame)
+            self.behaviour.action(self.environment, self.control, frame)
 
             #Render view if option is true
             if self.display_view:

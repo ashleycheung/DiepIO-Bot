@@ -206,7 +206,6 @@ class MergeSort:
 
     """Sort an array"""
     def sort(self, array):
-        print("split: " +str(array))
         if len(array) <= 1:
             return array
         mid = len(array)//2
