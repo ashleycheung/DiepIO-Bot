@@ -5,11 +5,11 @@ import time
 class BotRender:
     def __init__(self):
         self.show_player = True
-        self.show_objects = False
+        self.show_objects = True
         self.last_render_time = None
         self.total_fps = 0
         self.fps_detects = 0
-
+        self.output_video = None
 
     """Renders the view for humans to see"""
     def render_view(self, frame, environment):

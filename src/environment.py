@@ -10,8 +10,9 @@ class GameObject:
     TRIANGLE = 'Triangle'
     SQUARE = 'Square'
     PENTAGON = 'Pentagon'
-    SHAPE_GROUP = 'Group of Shapes'
     PLAYER = 'Player'
+    ENEMY = 'Enemy'
+    ALLY = 'ALLY'
     def __init__(self, bbox, object_type, distance = None):
         self.bbox = bbox
         self.type = object_type

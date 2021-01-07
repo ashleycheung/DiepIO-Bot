@@ -83,7 +83,10 @@ class Bot:
     """Lets the bot play"""
     def play(self):
         print(HELP_MSG)
-        ca = CollisionAvoidance()
+        #Make video writere
+        # output_video = cv2.VideoWriter('output.avi'
+        #     ,cv2.VideoWriter_fourcc('M','J','P','G'), 10
+        #     , CAPTURE_SIZE)
         while self.playing:
             #Get the current game frame
             frame = self.screen_cap.get_frame()
@@ -91,25 +94,20 @@ class Bot:
             #Update the environment
             self.game_parser.update(frame, self.environment)
 
-            # mouse_pos = Vector2.from_tuple(pyautogui.position())
-            # player_pos = Vector2.from_tuple(self.screen_cap.position)
-            # player_pos += self.environment.player.centre
-            # direction = mouse_pos - player_pos
-            # direction = ca.get_direction(direction, self.environment, frame)
-            # self.control.move(direction)
-
             #Apply the bot action
-            self.behaviour.action(self.environment, self.control, frame)
+            #self.behaviour.action(self.environment, self.control, frame)
 
             #Render view if option is true
             if self.display_view:
                self.render.render_view(frame, self.environment)
 
+            #output_video.write(frame)
+
             #Check if the bot is paused
             self.check_if_paused()
 
         print(f"Average fps {self.render.get_average_fps()}")
-
+        #output_video.release()
         #Close all windows
         cv2.destroyAllWindows()
         print("Bot has shutdown. Goodbye.")

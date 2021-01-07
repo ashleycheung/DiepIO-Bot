@@ -10,8 +10,6 @@ from environment import *
 from config import *
 from render import BotRender
 
-MIN_OBJECT_AREA = 500
-
 """This class captures the screen"""
 class ScreenCapture:
     def __init__(self, size):
@@ -75,11 +73,17 @@ class ScreenCapture:
             print("clicked")
             self.centre = pyautogui.position()
 
-
 """This is used to detect what shape an object is"""
-class ShapeDetector:
-    @staticmethod    
-    def detect(contour):
+class ObjectClassifier:
+    OBJECT_COLOURS = {
+        GameObject.ALLY : (225,178,43),
+        GameObject.ENEMY : (84,78,241),
+        GameObject.PENTAGON : (251,140,118),
+        GameObject.SQUARE : (105,232,255),
+        GameObject.TRIANGLE : (119,117,243)
+    }
+    """Detect the object given its contour and colour"""
+    def classify(self, contour, colour):
         shape = GameObject.UNKNOWN
         peri = cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, 0.04 * peri, True)
@@ -93,12 +97,57 @@ class ShapeDetector:
             aspect_ratio = w / float(h)
             if aspect_ratio >= 0.95 and aspect_ratio <= 1.05:
                 shape = GameObject.SQUARE
-            else:
-                shape = GameObject.SHAPE_GROUP
         elif vertices_num == 5:
-            shape = GameObject.PENTAGON
-        
+            pent_dist = self.get_colour_distance(
+                ObjectClassifier.OBJECT_COLOURS[GameObject.PENTAGON],
+                colour)
+            
+            enemy_dist = self.get_colour_distance(
+                ObjectClassifier.OBJECT_COLOURS[GameObject.ENEMY],
+                colour)
+
+            ally_dist = self.get_colour_distance(
+                ObjectClassifier.OBJECT_COLOURS[GameObject.ALLY],
+                colour)
+
+            min_dist = min(pent_dist, enemy_dist, ally_dist)
+
+            if min_dist == pent_dist:
+                shape = GameObject.PENTAGON
+            elif min_dist == enemy_dist:
+                shape = GameObject.ENEMY
+            elif min_dist == ally_dist:
+                shape = GameObject.ALLY
+        else:
+            #Try classify with colour
+            detected_shape = self.get_object_from_colour(colour)
+            #If able to detect, use it
+            if detected_shape:
+                shape = detected_shape
+
         return shape
+
+    """Given a colour return the most likely object"""
+    def get_object_from_colour(self, colour):
+        closest_dist = None
+        closest_target = None
+        for obj in ObjectClassifier.OBJECT_COLOURS.keys():
+            obj_colour = ObjectClassifier.OBJECT_COLOURS[obj]
+            dist = self.get_colour_distance(obj_colour, colour)
+            if closest_dist is None or dist < closest_dist:
+                closest_dist = dist
+                closest_target = obj
+        #If the colours are close enough return it
+        if closest_dist < 500:
+            return obj
+        return None
+    
+    """Returns the colour distance between two colours"""
+    def get_colour_distance(self, colour1, colour2):
+        b = colour1[0] - colour2[0]
+        g = colour1[1] - colour2[1]
+        r = colour1[2] - colour2[2]
+        return b * b + g * g + r * r
 
 
 """Stores a collection of tracked objects"""
@@ -173,6 +222,8 @@ class TrackedObjects:
 
 """Class used to detect objects"""
 class DetectionAlgorithm:
+    def __init__(self):
+        self.classify = ObjectClassifier()
     """
     Given a frame, detect and return a list of detected game objects
     object limit is how many objects it will detect
@@ -198,21 +249,30 @@ class DetectionAlgorithm:
             if not object_limit is None and num_detected >= object_limit:
                 break
             
-            #Get object bbox, apply origin offset and buffer
+            #Get object bbox
             o_bbox = cv2.boundingRect(contour)
-            o_bbox = (o_bbox[0] + origin[0]
+            
+            #apply origin offset and buffer
+            shifted_o_bbox = (o_bbox[0] + origin[0]
                 , o_bbox[1] + origin[1], o_bbox[2], o_bbox[3])
 
             #Check if overlaps with player bbox
-            if player_bbox and BBoxOps.bbox_overlap(player_bbox, o_bbox):
+            if player_bbox and BBoxOps.bbox_overlap(player_bbox, shifted_o_bbox):
                 continue
 
             #Skip if the object is too small
             if cv2.contourArea(contour) < MIN_OBJECT_AREA:
                 continue
-            shape = ShapeDetector.detect(contour)
+            
+            #Detect object centre colour by moments
+            M = cv2.moments(contour)
+            cX = int(M["m10"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
+            centre_color = tuple(frame[cY][cX])
+
+            shape = self.classify.classify(contour, centre_color)
             #Make game object
-            game_object = GameObject(o_bbox, shape)
+            game_object = GameObject(shifted_o_bbox, shape)
             nearby_objects.append(game_object)
             num_detected += 1
         return nearby_objects
@@ -274,45 +334,3 @@ class GameParser:
         if self.detect_rate > 0:
             self.frames_passed = (self.frames_passed + 1) % self.detect_rate
         return self.tracked_objects
-
-
-if __name__ == '__main__':
-    s = ScreenCapture(CAPTURE_SIZE)
-    s.configure()
-    td = GameParser()
-    prev_time = None
-    total_fps = 0
-    fps_detects = 0
-    while True:
-        frame = s.get_frame()
-
-        #Get fps
-        if prev_time is None:
-            prev_time = time.time()
-        else:
-            curr_time = time.time()
-            time_elapsed = curr_time - prev_time
-            prev_time = curr_time
-            fps = 1.0 / time_elapsed
-            total_fps += fps
-            fps = round(fps, 0)
-            fps_detects += 1
-            BotRender.draw_text(frame, 'fps: ' + str(fps), (10,30))
-
-        # tracked_objects = td.update(frame)
-
-        # has_lost_track = False
-        # for t in tracked_objects.objects:
-        #     if t.is_tracked:
-        #         BotRender.draw_rect(t.bbox, frame, (0,255,0))
-        #     else:
-        #         BotRender.draw_rect(t.bbox, frame, (0,0,255))
-        #         has_lost_track = True
-        #     BotRender.draw_text(frame, str(t.type), (int(t.bbox[0]), int(t.bbox[1])))
-
-        cv2.imshow("trackng", frame)
-        #If esc is pressed
-        if cv2.waitKey(1) == 27:
-            break
-    
-    print(f"Average fps {total_fps / fps_detects}")

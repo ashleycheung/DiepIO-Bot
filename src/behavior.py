@@ -67,28 +67,37 @@ class TargetState(State):
     def __init__(self, state_machine, tracking_buffer=(20,20)):
         super().__init__(state_machine)
         self.avoid = CollisionAvoidance()
-        self.sort_alg = ImportanceSort(self.get_importance)
+        self.sort_alg = ImportanceSort()
 
     """Given an environment return the target object"""
     def find_target(self, environment):
         objects = environment.objects
+
+        #Calculate importance for all the objects
+        object_importances = []
+        player_pos = environment.player.centre
+        for o in environment.objects:
+            object_importances.append((o, self.get_importance(o, player_pos)))
+
         #Sort the neighbours based on importance
-        objects = self.sort_alg.sort(objects)
+        objects = self.sort_alg.sort(object_importances)
 
         if len(objects) == 0:
             return None
         #Get the most important object as the target
-        return objects[0]
+        return objects[0][0]
 
     """Get the importance of a game object"""
-    def get_importance(self, game_object):
+    def get_importance(self, game_object, player_pos):
         importance = 0
         if game_object.type == GameObject.SQUARE:
             importance += 10
         elif game_object.type == GameObject.TRIANGLE:
-            importance += 25
+            importance += 100
         elif game_object.type == GameObject.PENTAGON:
-            importance += 130
+            importance += 200
+        dist = player_pos.distance_to(game_object.centre)
+        importance += (max(200 - dist, 0) / 10)
         return importance
 
     """Overrides"""
@@ -115,7 +124,7 @@ class TargetState(State):
         #Shoot
         controller.shoot(target.centre)
 
-    
+
 
 #This is the max distance the bot sees for the collision avoidance algorithm
 MAX_SEE_AHEAD = 80
@@ -197,6 +206,7 @@ class MergeSort:
 
     """Sort an array"""
     def sort(self, array):
+        print("split: " +str(array))
         if len(array) <= 1:
             return array
         mid = len(array)//2
@@ -204,25 +214,28 @@ class MergeSort:
         left = array[:mid]
         right = array[mid:]
         #Sort the left
-        self.sort(left)
-        self.sort(right)
+        left = self.sort(left)
+        right = self.sort(right)
         return self.__merge(left, right)
 
     """Merge two arrays in sorted order"""
     def __merge(self, arr1, arr2):
-        combined = arr1 + arr2
         temp = []
-        while len(combined) != 0:
-            highest = combined[0]
-            highest_index = 0
-            #Loop through and get current highest game object
-            for obj_index in range(len(combined)):
-                #Compare to see if current obj is greater
-                if self.__should_insert(combined[obj_index], highest):
-                    highest = combined[obj_index]
-                    highest_index = obj_index
-            #Remove the strategy of highest importance
-            temp.append(combined.pop(highest_index))
+        while len(arr1) > 0 or len(arr2) > 0:
+            if len(arr1) == 0:
+                temp.append(arr2.pop(0))
+            elif len(arr2) == 0:
+                temp.append(arr1.pop(0))
+            elif self.compare(arr1[0], arr2[0]) == -1:
+                if self.descending:
+                    temp.append(arr2.pop(0))
+                else:
+                    temp.append(arr1.pop(0))
+            else:
+                if self.descending:
+                    temp.append(arr1.pop(0))
+                else:
+                    temp.append(arr2.pop(0))
         return temp
 
     """Checks if the algorithm should insert i given j is highest"""
@@ -250,19 +263,15 @@ class MergeSort:
 
 """Sort game objects based on importance"""
 class ImportanceSort(MergeSort):
-    def __init__(self, importance_func):
+    def __init__(self):
         #Make sure merge sort is done descendingly
         super().__init__(True)
-        self.importance_func = importance_func
 
     """Overrides"""
     def compare(self, i, j):
-        i_im = self.importance_func(i)
-        j_im = self.importance_func(j)
-
-        if i_im < j_im:
+        if i[1] < j[1]:
             return -1
-        elif i_im == j_im:
+        elif i[1] == j[1]:
             return 0
         else:
             return 1
