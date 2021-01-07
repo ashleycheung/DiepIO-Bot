@@ -295,7 +295,7 @@ class GameParser:
 
     """Sets the player of the game"""
     def init(self, frame, player_bbox):
-        self.player_tracker.init(frame, player_bbox)
+        self.player_tracker.init(frame, BBoxOps.make_int(player_bbox))
 
     """Updates the environment given a frame"""
     def update(self, frame, environment):
