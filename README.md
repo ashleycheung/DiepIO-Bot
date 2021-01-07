@@ -2,6 +2,8 @@
 
 This a bot that plays Diep.io using Python and OpenCV
 
+Gameplay Video: https://www.youtube.com/watch?v=730g31K6CnI&feature=youtu.be&ab_channel=ashleycheung
+
 ## Bot functions
 ### Collision Avoidance
 The bot is able to automatically avoid collisions based on how close nearby objects are
